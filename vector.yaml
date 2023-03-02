@@ -1,0 +1,36 @@
+sources:
+  datadog_agents:
+    type: datadog_agent
+    address: "0.0.0.0:8080"
+    multiple_outputs: true
+
+transforms:
+  tag_logs:
+    type: remap
+    inputs:
+      - datadog_agents.logs
+    source: |
+      # The `!` shorthand is used here with the `string` function, it errors if
+      # .ddtags is not a "string".
+      # The .ddtags field is always expected to be a string.
+      .ddtags = string!(.ddtags) + ",sender:vector"
+  tag_metrics:
+    type: remap
+    inputs:
+      - datadog_agents.metrics
+    source: |
+      .tags.sender = "vector"
+
+sinks:
+  logs_to_datadog:
+    type: datadog_logs
+    inputs:
+       - tag_logs
+    default_api_key: "DD_API_KEY"
+  metrics_to_datadog:
+    type: datadog_metrics
+    inputs:
+       - tag_metrics
+    default_api_key: "DD_API_KEY"
+    acknowledgements: false
+    healthcheck: true
